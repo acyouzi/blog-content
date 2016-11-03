@@ -103,6 +103,7 @@ hexo 能够非常方便的更换主题，首先我们需要找到一些漂亮的
 3. 生成和发布
 
         hexo generate
+        npm install hexo-deployer-git --save 
         hexo deploy
 
 4. 访问地址 xxx.github.io 看看是不是能看到你发布的网站 ^-^
