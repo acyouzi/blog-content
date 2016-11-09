@@ -54,21 +54,91 @@ Phase 3: Compact (optional)
 一些垃圾收集器还有第三个步骤：紧凑。在这一步GC会移动对象合并那些垃圾收集遗留下来的空闲空间。这样可以防止内存碎片化，内存碎片会导致大段的连续内存分配失败。
 ![Compact]( img/gc_compact.gif )
 
-So what are the "roots"? In a simple Java application, they're method arguments and local variables (stored on the stack), the operands of the currently executing expression (also stored on the stack), and static class member variables.
+那么，roots节点包括哪些呢？在一个简单的java application 中，方法参数，本地变量(存储在栈上)，正在执行的表达式的操作数(也存储在栈上)，静态类成员变量。
 
-In programs that use their own classloaders, such as app-servers, the picture gets muddy: only classes loaded by the system classloader (the loader used by the JVM when it starts) contain root references. Any classloaders that the application creates are themselves subject to collection, once there are no more references to them. This is what allows app-servers to hot-deploy: they create a separate classloader for each deployed application, and let go of the classloader reference when the application is undeployed or redeployed.
+在例如app-servers等使用自己的类加载器的程序中，情况就不同了：只有使用系统 classloader(JVM启动时使用的类加载器)加载的类会包含在 root 引用中(翻译的不对？:only classes loaded by the system classloader (the loader used by the JVM when it starts) contain root references.)。任何程序自己创建的类加载的在没有应用的时候都会被收集。这也是app-servers能够热部署的原因：它们为每个已部署的应用程序创建一个单独的类加载器，并在卸载或重新部署应用程序时不再持有classloader引用
 
-It's important to understand root references, because they define what a "strong" reference is: if you can follow a chain of references from a root to a particular object, then that object is "strongly" referenced. It will not be collected.
+这对理解root引用很重要，它定义了什么是强引用：如果你能够找到一条从根节点到特定节点的引用链，那么这个对象就是有强引用的，不能被回收。
 
-So, returning to method foo(), the parameter bar and local variable baz are strong references only while the method is executing. Once it finishes, they both go out of scope, and the objects they referenced are eligible for collection. Alternatively, foo() might return a reference to the Integer that it creates, meaning that object would remain strongly referenced by the method that called foo().
+现在回到foo()方法，参数bar和本地变量baz在方法执行期间是强引用变量，当方法完成时，他们就超出了作用域，他们引用的对象就能被回收。或者考虑foo()可能会返回一个他创建对象的integer对象的实例，这意味着对象仍然保持着强引用。
 
-Now consider the following:
+考虑下面的代码：
+    
+    LinkedList foo = new LinkedList();
+    foo.add(new Integer(123));
 
-LinkedList foo = new LinkedList();
-foo.add(new Integer(123));
-Variable foo is a root reference, which points to the LinkedList object. Inside the linked list are zero or more list elements, each of which points to its successor. When we call add(), we add a new list element, and that list element points to an Integer instance with the value 123. This is a chain of strong references, meaning that the Integer is not eligible for collection. As soon as foo goes out of scope, however, the LinkedList and everything in it are eligible for collection — provided, of course, that there are no other strong references to it.
+变量foo 是一个root引用，指向LinkedList对象，链表里面有0或多个元素，每个元素都执行它的后继。这是一个强引用链，这里的对象放的Integer是不能被回收的，
+但是只要foo超出作用域，那这里面的所有东西就不再是强引用了。
 
-You may be wondering what happens if you have a circular reference: object A contains a reference to object B, which contains a reference back to A. The answer is that a mark-sweep collector isn't fooled: if neither A nor B can be reached by a chain of strong references, then they're eligible for collection.
-
+你可能会想，如果发生了循环引用会怎样：答案是没关系...(扫面标记算法不怕这个)
 
 ### Finalizers 
+C++ 允许对象定义析构函数：当对象超出作用域或者显式删除时析构函数会被调用来释放资源。对于多数对象，需要在这里释放new或者malloc申请的内存。
+
+在java里面，垃圾收集器会替你处理内存清理，所以你不需要显式的声明析构函数。
+
+但是，内存不是唯一需要释放的资源，比如FileOutputStream：当你创建一个对象实例，他会从文件系统申请一个句柄，如果让所有对流的引用在关闭之前超出范围，那么文件句柄会发生什么？
+答案是流有一个finalize方法：一个由JVM在垃圾回收器回收对象之前调用的方法。在FileOutputStream的例子中，dinalizer会关闭stream,释放文件句柄刷新缓存确保所有的数据正确写到磁盘。
+
+    /**
+     * Cleans up the connection to the file, and ensures that the
+     * <code>close</code> method of this file output stream is
+     * called when there are no more references to this stream.
+     *
+     * @exception  IOException  if an I/O error occurs.
+     * @see        java.io.FileInputStream#close()
+     */
+    protected void finalize() throws IOException {
+        if (fd != null) {
+            if (fd == FileDescriptor.out || fd == FileDescriptor.err) {
+                flush();
+            } else {
+                /* if fd is shared, the references in FileDescriptor
+                 * will ensure that finalizer is only called when
+                 * safe to do so. All references using the fd have
+                 * become unreachable. We can call close()
+                 */
+                close();
+            }
+        }
+    }
+
+任何对象都能有finalizer,你只需要重写finalize方法
+
+    protected void finalize() throws Throwable
+    {
+        // cleanup your object here
+    }
+
+finalizers 方法看起来是一个简单的清理方法，但是他有一些严重的问题。首先你千万别依赖这个方法去做任何重要的事情，因为finalizer可能永远都不会执行，
+程序可能在垃圾收集前就退出了，还有其他一些乱七八糟的问题。
+
+### Object Life Cycle (without Reference Objects)
+整体来看，对象的生命周期可以通过下面的简单图片来总结:创建，初始化，使用，可被收集，被回收。阴影区域表示对象“强可达”的时间.
+![对象生命周期](img/object_life_cycle.gif)
+
+### Enter Reference Objects
+JDK 1.2 引入了 java.lang.ref 包, 和对象声明周期的三个新阶段: softly-reachable, weakly-reachable,和phantom-reachable. 这些阶段仅仅在对象回收时有用，并且所讨论的对象必须是引用对象的引用：
+* softly reachablet 
+    软引用，垃圾收集器会尽量保留这些对象，但是当内存不足将要抛出 OutOfMemoryError 错误时会先回收这些对象
+* weakly reachable
+    弱引用 WeakReference，垃圾收集器会随时回收，不会试图保留这种引用。实际上，对象会在老年代(major)垃圾收集中被回收，在新生代(minor)垃圾收集中可能会存活
+* phantom reachable
+    幻影引用？ PhantomReference，已经是选中被回收的对象了，并且finalizer方法已经运行(why?我不确定)，你没法通过get获得可访问的强引用对象。
+
+正如你可能猜到的，将三个新的可选状态添加到对象生命周期图中会造成混乱。虽然文档表明从通过软，弱和幻影强烈可达到的逻辑扩展，但是实际要依靠你程序创建了什么样的引用对象。如果创建WeakReference但不创建SoftReference，那么对象将从强可达直接弱可打然后完成到收集。
+![引用对象生命周期](img/object_life_cycle_with_refobj.gif)
+
+It's also important to understand that not all objects are attached to reference objects — in fact, very few of them should be. A reference object is a layer of indirection: you go through the reference object to reach the referent, and clearly you don't want that layer of indirection throughout your code. Most programs, in fact, will use reference objects to access a relatively small number of the objects that the program creates.
+
+### References and Referents
+
+### Soft References
+
+### Weak References
+
+### Reference Queues
+
+### Phantom References
+
+

@@ -77,3 +77,4 @@ Metaspace 的内存分配模型：大部分类元数据都在本地内存中分�
 主流的有句柄和直接指针两种。使用句柄来访问的优点是栈中reference的地址时稳定的，当对象因为垃圾收集被移动时不需要修改reference本身，直接访问的好处时访问速度快。
 <img src="img/obj_reference1.png" width=600/>
 <img src="img/obj_reference2.png" width=600/>
+
