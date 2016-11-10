@@ -129,15 +129,132 @@ JDK 1.2 引入了 java.lang.ref 包, 和对象声明周期的三个新阶段: so
 正如你可能猜到的，将三个新的可选状态添加到对象生命周期图中会造成混乱。虽然文档表明从通过软，弱和幻影强烈可达到的逻辑扩展，但是实际要依靠你程序创建了什么样的引用对象。如果创建WeakReference但不创建SoftReference，那么对象将从强可达直接弱可打然后完成到收集。
 ![引用对象生命周期](img/object_life_cycle_with_refobj.gif)
 
-It's also important to understand that not all objects are attached to reference objects — in fact, very few of them should be. A reference object is a layer of indirection: you go through the reference object to reach the referent, and clearly you don't want that layer of indirection throughout your code. Most programs, in fact, will use reference objects to access a relatively small number of the objects that the program creates.
-
+这对理解并不是所有的对象都附加到引用对象这点很重要，事实上只有少数会附加到引用对象。引用对象是一个中间：通过引用对象到达实际对象，显然在你的代码中你并不想要这一层。
+实际上大多数你只会小范围使用这个对象.
 ### References and Referents
+引用对象是你的程序代码和其他对象之间的中间层，称为referent。每个引用对象通过传入referent构建，并且不能改变实际对象。
+![引用示意](img/normal_refobj_relations.gif)
+
+引用对象提供一个get方法来取回强引用，垃圾回收器会在任何地方回收引用，一旦引用被回收了，get方法就会返回null,使用引用属性，你需要把大麦写的像下面一样：
+
+    SoftReference<List<Foo>> ref = new SoftReference<List<Foo>>(new LinkedList<Foo>());
+
+    // somewhere else in your code, you create a Foo that you want to add to the list
+    List<Foo> list = ref.get();
+    if (list != null)
+    {
+        list.add(foo);
+    }
+    else
+    {
+        // list is gone; do whatever is appropriate
+    }
+
+总结:
+
+1. 注意检查 referent 是否为 null
+    引用任何时候能有可能被清理。
+2. 在使用的时候必须持有强引用
+    比如后面这样的写法是错误的 ref.get().add(foo)，必须持有显式写明持有强引用，因为在get和add中间对象可能被回收，垃圾收集器跟作业跑在不同的线程中。
+and doesn't care what your code is doing.
+3. 要持有引用对象的强引用。
+如果你创建了一个引用对象，但是运行超出了他的作用域，那么这个引用对象本身就会被回收了。看起来很明显，但是容易被忘记，尤其是在使用reference queues跟踪你的引用的时候。
+
+另外需要记得soft, weak, 和 phantom references 只有在他们持有的对象没有强引用时才起作用。他们的存在使你可以知道对象被回收的点。这看起来有点奇怪 -- 如果你不在持有强引用，为什么你还要关心这个对象什么时候被回收呢？原因取决于具体的引用类型。
 
 ### Soft References
+让我们先从soft references开始回答这个问题，如果一个对象是软引用对象，并且没有其他强引用，那么GC可以回收这个对象但是GC尽量不这么做，
+最后的结果是，软引用对象会存活很长时间，主要jvm有足够的内存。
+
+JDK文档说软引用适用于内存敏感的缓存：每个缓存的对象通过SoftReference访问，如果JVM决定它需要空间，那么它将清除一些或所有的引用并回收它们的引用，如果它不需要空间，则对象保留在堆中，并且可以被程序代码访问。在这种场景先，当需要使用对象时持有强引用，否则是弱引用。如果弱引用被清除，你需要刷新缓存。
+
+然而，为了使用这玩意，缓存的对象会相当大 - 每对象个大约几千字节。如果你实现一个文件服务器，需要对相同的文件文件定期检索，或有大对象图(large object graphs?)，需要缓存或许会有用。但是如果你的对象很小，那么你必须清除很多对象才能产生影响，而引用对象会增加整个过程的开销.
+
+#### Soft Reference as Circuit Breaker
+下面原文是举了一个数据库访问的例子，我这里就直接粘贴代码了
+
+    public static List<List<Object>> processResults(ResultSet rslt)
+    throws SQLException
+    {
+        try
+        {
+            SoftReference<List<List<Object>>> ref = new SoftReference<List<List<Object>>>(new LinkedList<List<Object>>());
+            ResultSetMetaData meta = rslt.getMetaData();
+            int colCount = meta.getColumnCount();
+
+            while (rslt.next())
+            {
+                rowCount++;
+                // store the row data
+
+                List<List<Object>> results = ref.get();
+                if (results == null)
+                    throw new TooManyResultsException(rowCount);
+                else
+                    results.add(row);
+
+                results = null;
+            }
+
+            return results;
+        }
+        finally
+        {
+            closeQuietly(rslt);
+        }
+    }
+
+如果不使用引用，那么当读取查询结果时，如果记录太多会引发 OutOfMemoryError 错误，这么看来即便是引发OutOfMemoryError也没什么，说明我们没处理好呗。但是考虑如果我们的程序跑在服务器上，并且并不只有这一个程序，那么我们的程序占用太多内存影响其他程序。
+
+#### Soft References Aren't A Silver Bullet
+这段大体意思是说，使用这个亦有可能发生 OutOfMemoryError ，另外通过弱引用get到的强引用要不用了不要保留强引用，不然这个弱引用跟没有没什么区别。
 
 ### Weak References
+实际上有两个主要用途：关联没有固有关系的对象，并通过规范化映射减少重复。
+
+#### The Problem With ObjectOutputStream 
+ObjectOutputStream 和他的搭档 ObjectInputStream 提供了一种对象序列化的方式，从对象模型的角度来看，流和使用这些流写入的对象之间没有关系：流不是由写入的对象组成，也不会聚合它们。为了保留对象标识，输出流将唯一标识符与写入的每个对象相关联，随后请求写入的对象如果引用过前面的对象，会替换成标识符。这样可以解决循环引用的问题。
+
+但是为了实现这个功能，流需要持有每个写入对象的强引用，这就会引发一个问题，消息是瞬态的但是流持有的对象会一直在内存里面，这样早晚会发生 out of memory(除非程序员显式的调用reset())
+
+那么如果把流持有的是弱引用，当程序中不再持有对象的强引用的时候，弱引用就会被释放，但是...(一顿关于为什么JDK开发者不使用弱引用解决这个问题的牢骚牢骚)
+
+#### 使用 Canonicalizing Maps 去除重复数据
+作者认为weak references 最好的应用场景是canonicalizing map, 一种确保在同一时间只有一个实例存在的机制。String.intern()是这种应用的典型的例子。
+
+下面给出一段有问题的例子 intern 例子
+
+    private Map<String,String> _map = new HashMap<String,String>();
+    public synchronized String intern(String str)
+    {
+        if (_map.containsKey(str))
+            return _map.get(str);
+        _map.put(str, str);
+        return str;
+    }
+
+这段代码如果长时间运行持有的对象就会越来越多，最终把内存耗尽。
+
+    private Map<String,WeakReference<String>> _map
+        = new WeakHashMap<String,WeakReference<String>>();
+    public synchronized String intern(String str)
+    {
+        WeakReference<String> ref = _map.get(str);
+        String s2 = (ref != null) ? ref.get() : null;
+        if (s2 != null)
+            return s2;
+
+        _map.put(str, new WeakReference(str));
+        return str;
+    }
+
+如果改用弱引用来实现，当内存中不存在强引用时，弱引用就被回收了。这样就不存在对象积累越多的情况了。注意上面的代码可能存在多线程访问所以加了锁。
+
+(补充：这种弱引用看起来就像是保存了一个引用的副本，我们只是希望通过这个副本去找到相应的对象，但是当强引用不存在了，我们不希望这个副本影响到对象的生命周期)
+最后，我们怎么知道哪些弱引用或者软引用被回收了呢？就是后边要说的引用队列了。
 
 ### Reference Queues
+
 
 ### Phantom References
 
