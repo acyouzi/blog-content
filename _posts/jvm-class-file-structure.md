@@ -6,7 +6,7 @@ author: "acyouzi"
 # header-img: img/dog.jpg
 tags:
 	- jvm
-	- 类加载
+	- class
 ---
 ### 概念
 全限定名：包名.类名，然后把其中所有的 " . " 换成 " / " 最后再加一个分号,如com.acyouzi.test.Demo 的全限定名是 com/acyouzi/test/Demo;
