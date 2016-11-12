@@ -273,7 +273,7 @@ TestByteCode.class文件经过 javap -v 后生成的文件内容如下（经过�
         Code:
         stack=2, locals=0, args_size=0
             0: iconst_1
-            <em>// static 变量 i 赋值初值</em>
+            // static 变量 i 赋值初值
             1: putstatic     #8                  // Field i:I
             4: getstatic     #3                  // Field java/lang/System.out:Ljava/io/PrintStream;
             7: ldc           #9                  // String static

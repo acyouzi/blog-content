@@ -254,8 +254,76 @@ ObjectOutputStream 和他的搭档 ObjectInputStream 提供了一种对象序列
 最后，我们怎么知道哪些弱引用或者软引用被回收了呢？就是后边要说的引用队列了。
 
 ### Reference Queues
+测试一个引用是否为空来判断实际对象是否被回收是一件非常低效率的事情，如果引用太多，你会会在这上面花费很多时间。
 
+更好的解决方案是 reference queue：把引用对象在创建时就与一个引用队列相关联，当实际对象被清理后把引用添加到这个队列中。想要知道哪些对象被清理了，你可以轮训队列。这个过程可以在后台线程中完成，但是一般是在你创建一个新的引用时轮询。(WeakHashMap 是这么做的)
+
+引用对列经常与 phantom references 引用一起使用，但是也可以与其他引用类型配合使用，下面是一个弱引用的例子:创建了一堆缓冲区，通过WeakReference访问，并在每次创建后查看已清除的引用
+
+    public static void main(String[] argv) throws Exception
+    {
+        Set<WeakReference<byte[]>> refs = new HashSet<WeakReference<byte[]>>();
+        ReferenceQueue<byte[]> queue = new ReferenceQueue<byte[]>();
+        
+        for (int ii = 0 ; ii < 1000 ; ii++)
+        {
+            WeakReference<byte[]> ref = new WeakReference<byte[]>(new byte[1000000], queue);
+            System.err.println(ii + ": created " + ref);
+            refs.add(ref);
+            
+            Reference<? extends byte[]> r2;
+            while ((r2 = queue.poll()) != null)
+            {
+                System.err.println("cleared " + r2);
+                refs.remove(r2);
+            }
+        }
+    }
+
+这里一些需要注意的地方是：首先，虽然我们创建的是弱引用的实例，但是当进入引用对列然后我们再次获取的时候返回的是一个没有具体类型的引用，这告诉我们一旦进入对列我们就不在关心引用的具体类型了，因为引用所关联的具体对象已经被回收了。
+
+其次是我们必须持有引用对象的强引用，引用对象有对象的引用，但是队列在引用对象进入对列之前却不知道引用对象的存在。如果我们没有持有引用对象的强引用，那么这个引用对象会被直接回收，我们也就看不到它进入引用对列的那天了。
 
 ### Phantom References
+Phantom references 与软引用弱引用不同，他不能用来访问他们自己的关联的实际对象。他们唯一的目的是当他们关联的实际对象被回收时给你个通知。这看起来毫无意义，但是实际上你可以通过这个通知执行资源清理，这比通过 finalizers 来清理资源靠谱多了。
+
+#### The Trouble With Finalizers
+大体意思是说：前面关于对象的生命周期中提到了一些不适合用于非内存资源清理的问题，这里我们在强调一下：
+
+* finalizer 可能永远都不会被执行 
+* Finalizers 中可能再次创建强引用，但是下一次收集时这个Finalizer又不会再次执行了，这导致逻辑很乱。(finalize 只会被执行一次)
+
+finalize 真正的问题他在第一次标记和垃圾回收直接引入了一个间隙，finalize 在一个独立的线程中运行，考虑下如果我们每个对象都有finalize的情况，和某些finalize 运行一些需要长时间运行的任务的情况。 ^-^
+
+下面的程序展示了这种行为，虚拟机启动参数 -Xmx64m :
+
+    public class SlowFinalizer
+    {
+        public static void main(String[] argv) throws Exception
+        {
+            while (true)
+            {
+                Object foo = new SlowFinalizer();
+            }
+        }
+
+        // some member variables to take up space -- approx 200 bytes
+        double a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z;
+
+        // and the finalizer, which does nothing by take time
+        protected void finalize() throws Throwable
+        {
+            try { Thread.sleep(500L); }
+            catch (InterruptedException ignored) {}
+            super.finalize();
+        }
+    }
+
+#### The Phantom Knows
+在对象被清理时会使 Phantom references 知道，所以也可以用于非内存资源清理，但是不像 finalize ，当应用知道时对象已经被清理了。
+
+另外，清理调度是应用控制的而非GC.你可以使用一个或多个线程来清理，或者根据对象需要增加。一种替代方法 是使用对象工厂，并在创建新对象之前清除任何可以收集的实例。
+
+phantom references 的 get 方法永远返回 null，这意味着我们必须一直持有资源的一个强引用，并且使用引用队列来识别引用是否被回收。
 
 
