@@ -13,7 +13,8 @@ tags:
 [java reference objects]( http://www.kdgregory.com/index.php?page=java.refobj )
 
 ### Introduction
-balabala...
+大意：我原来做c++的，后来转java了，我觉得java挺好。^-^
+(原文中有 References 和 referent 两个概念需要明确一下：References 是我翻译成引用,就是强引用弱引用的那些引用的意思，referent是引用持有的实例，就是创建引用时通过构造函数传进去的实际对象)
 
 ### java堆和对象声明周期
 作为一个刚投身 Java 阵营的 C++ 程序员， 对于堆栈的理解很难转换过来。C++里面，对象可以用 new 运算符创建在堆上，也能通过自动分配创建在栈上。下面的情况在C++里面是合法的：在栈上创建一个 Integer 对象。但是用Java编译器去编译就会报错
@@ -325,5 +326,18 @@ finalize 真正的问题他在第一次标记和垃圾回收直接引入了一�
 另外，清理调度是应用控制的而非GC.你可以使用一个或多个线程来清理，或者根据对象需要增加。一种替代方法 是使用对象工厂，并在创建新对象之前清除任何可以收集的实例。
 
 phantom references 的 get 方法永远返回 null，这意味着我们必须一直持有资源的一个强引用，并且使用引用队列来识别引用是否被回收。
+![phantom_refobj_relations](phantom_refobj_relations.gif)
+
+#### Implementing a Connection Pool with Phantom References
+数据库连接在任何应用中都是很重要的资源：他们花费时间建立，并且数据库会严格限制同一时间的链接数量。so,coder 必须小心的使用这些资源，打开了要记得在 finally 方法中关闭。
+
+大多数数据开发一般不是直接建立连接而是使用连接池，连接池使用多种方法来防止连接泄露。包括超时机制和链接回收。
+
+后一个特征可以作为幻影参考的一个很好的例子。(原文中有一段关于连接池的例子，不贴代码了，具体细节可以去原文中看，代码大体就是返回的数据库连接做了一层包裹，连接池维护包裹对象的Phantom Reference，当包裹对象被回收时，Phantom Reference 就被添加到引用对列中，这样我们就能知道这个数据库链接该回收了。同时我们持有数据库连接的强引用这样数据库连接就不会被回收了，当然不排除其他情况导致数据库连接被关闭，所以我们也要在返回连接时检测连接是否可用)
+
+#### The Trouble with Phantom References
+Phantom References 也可能发生 finalizer 一样的问题：比如垃圾收集器没有执行垃圾收集操作，那么内存中的不可达对象就不会被回收，Phantom References也就不会进入引用队列了。当然你可以显式的调用System.gc()去通知jvm去进行垃圾回收（ps: 不太好吧）。
+
+
 
 
