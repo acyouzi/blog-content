@@ -1,5 +1,5 @@
 ---
-title: java-parallel-basis
+title: java 并发基础
 date: 2016-11-19 19:21:13
 author: "acyouzi"
 # cdn: header-off
