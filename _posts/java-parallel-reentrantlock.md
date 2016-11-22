@@ -232,6 +232,13 @@ tags:
 
     主要在这一句 if (!hasQueuedPredecessors() && compareAndSetState(0, acquires)) 保证等待时间最长的线程才能参与锁竞争。
 
+    另外一个区别在 locl 方法，不会再去尝试获取锁，而是直接调用 acquire 方法。
+    
+        final void lock() {
+            acquire(1);
+        }
+    
+
 4. unlock 会调用 release 方法， 
 
         public final boolean release(int arg) {

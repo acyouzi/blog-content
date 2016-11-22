@@ -98,6 +98,8 @@ AbstractQueuedSynchronizer 可用作为一个同步工具的基础，持有一�
         return false;
     }
     protected boolean tryRelease(int arg) {
+        if (Thread.currentThread() != getExclusiveOwnerThread())
+                throw new IllegalMonitorStateException();
         if (compareAndSetState(1,0)) {
             setExclusiveOwnerThread(null);
             return true;
