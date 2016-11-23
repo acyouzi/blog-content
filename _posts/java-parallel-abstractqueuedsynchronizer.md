@@ -74,6 +74,7 @@ AbstractQueuedSynchronizer 可用作为一个同步工具的基础，持有一�
 当被阻塞的线程被唤醒时会执行 Thread.interrupted() 判断线程有没有被中断过，同时会清除中断状态，返回 true or false 。从这里开这种方法对中断好像不太敏感，要等到被唤醒并且抢到锁时才能对中断做出响应。
 
 #### 释放锁
+只会唤醒一个线程
 
     public final boolean release(int arg) {
         if (tryRelease(arg)) {
@@ -85,7 +86,7 @@ AbstractQueuedSynchronizer 可用作为一个同步工具的基础，持有一�
         return false;
     }
 
-首先调用我们自己定义的释放锁的方法，如果释放成功，从等待队列中选一个线程唤醒 LockSupport.unpark(s.thread);
+首先调用我们自己定义的释放锁的方法，如果释放成功，从等待队列中选一个线程唤醒 LockSupport.unpark(s.thread); 
 
 #### 关于 tryAcquire tryRelease 的重写，以及公平锁
 参展一些现有的实现 tryAcquire tryRelease 中一般需要使用 cas 修改 state 值，然后修改独占模式的运行线程引用。
@@ -161,7 +162,99 @@ AbstractQueuedSynchronizer 可用作为一个同步工具的基础，持有一�
     protected int tryAcquireShared(int arg)
     protected boolean tryReleaseShared(int arg)
 
-// 未完
+#### 获取锁
+只要还有锁线程来了就能获取，当锁不够时 tryAcquireShared 返回值小于 0, 然后调用 doAcquireShared 方法。
+    
+    public final void acquireShared(int arg) {
+        if (tryAcquireShared(arg) < 0)
+            doAcquireShared(arg);
+    }
+
+在 doAcquireShared 方法中首先添加节点到队列中，然后在进入循环后，如果当前节点是首节点，还会进行一次
+
+    private void doAcquireShared(int arg) {
+        final Node node = addWaiter(Node.SHARED);
+        boolean failed = true;
+        try {
+            boolean interrupted = false;
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head) {
+                    int r = tryAcquireShared(arg);
+                    if (r >= 0) {
+                        setHeadAndPropagate(node, r);
+                        p.next = null; // help GC
+                        if (interrupted)
+                            selfInterrupt();
+                        failed = false;
+                        return;
+                    }
+                }
+                if (shouldParkAfterFailedAcquire(p, node) &&
+                    parkAndCheckInterrupt())
+                    interrupted = true;
+            }
+        } finally {
+            if (failed)
+                cancelAcquire(node);
+        }
+    }
+
+最后调用 parkAndCheckInterrupt 部分跟 独占锁完全相同。
+
+#### 释放锁
+在 doReleaseShared 中会唤醒多个阻塞的线程
+
+    public final boolean releaseShared(int arg) {
+        if (tryReleaseShared(arg)) {
+            doReleaseShared();
+            return true;
+        }
+        return false;
+    }
+
+首先调用我们自己定义的 tryReleaseShared，当 tryReleaseShared 成功之后调用  doReleaseShared 唤醒等待的线程
+
+    private void doReleaseShared() {
+        for (;;) {
+            Node h = head;
+            if (h != null && h != tail) {
+                int ws = h.waitStatus;
+                if (ws == Node.SIGNAL) {
+                    // cas 操作
+                    if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
+                        continue;            // loop to recheck cases
+                    // 选一个线程唤醒
+                    unparkSuccessor(h);
+                }
+                else if (ws == 0 &&
+                         !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
+                    continue;                // loop on failed CAS
+            }
+            if (h == head)                   // loop if head changed
+                break;
+        }
+    }
+
+#### tryAcquireShared tryReleaseShared 的重写 
+因为可以有多个线程持有锁，任何线程都可以释放共享锁，因而不必在重写时设置锁的持有者。大体可以重写为一下形式：
+
+    protected int tryAcquireShared(int acquires) {
+        for (;;) {
+            int available = getState();
+            int remaining = available - acquires;
+            if (remaining < 0 || compareAndSetState(available, remaining))
+                return remaining;
+        }
+    }
+
+    protected boolean tryReleaseShared(int releases) {
+        for (;;) {
+            int c = getState();
+            if (compareAndSetState(c, c+releases ))
+                return nextc == 0;
+        }
+    }
 
 ### protected boolean isHeldExclusively()
 这个函数也需要自己实现，不同的业务逻辑有不同的实现方式，如重入锁中有如下实现：
@@ -175,5 +268,6 @@ AbstractQueuedSynchronizer 可用作为一个同步工具的基础，持有一�
     protected boolean isHeldExclusively() {
         return getState() != 0;
     }
+
 
 
