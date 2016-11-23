@@ -147,7 +147,7 @@ tags:
     c & EXCLUSIVE_MASK
 
 ### 读写锁使用
-下面代码中尝试使用锁降级，然而并没有看到性能的提升多少。3个线程使用写锁+读锁，10个线程只使用读锁。
+下面代码中尝试使用锁降级，然而并没有看到多少性能提升。3个线程使用写锁+读锁，10个线程只使用读锁。
 
     public class ReadWriteLockTest {
         public static ReentrantReadWriteLock rwlock = new ReentrantReadWriteLock();
