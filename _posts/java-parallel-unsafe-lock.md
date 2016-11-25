@@ -26,6 +26,29 @@ unpark 操作调用之前一定要确保线程是可用的，调用 park 操作�
 1. LockSupport 不能实例化，调用 UNSAFE 类实现功能
 2. UNSAFE.unpark 操作不太安全，如果在线程没有启动的时候就调用 UNSAFE.unpark 实际上不会起任何效果，这时如果线程执行调用了 LockSupport.park 就只能一直锁在那里了。
 
+#### LockSupport 中断测试
+
+    public static Runnable run = ()->{
+        long t = System.currentTimeMillis();
+        System.out.println("park");
+        LockSupport.park();
+        if(Thread.interrupted()){
+            System.out.println(  System.currentTimeMillis() - t );
+        }else {
+            System.out.println("unpark");
+            System.out.println(  System.currentTimeMillis() - t );
+        }
+    };
+    public static void main(String[] args) throws InterruptedException {
+        Thread t = new Thread(run);
+        t.start();
+        Thread.sleep(3000);
+        t.interrupt();
+        Thread.sleep(5000);
+        LockSupport.unpark(t);
+    }
+    
+下面的代码输出的时间是 3000 ，这说明 park 阻塞时如果发生 interrupt ,阻塞会立即结束。但是不会抛出任何异常，所以在使用 park 时一般需要随后使用 Thread.interrupted() 或者 Thread.currentThread().isInterrupted() 判断是否发生中断。
 
 ### Atomic 包使用
 1. 基本类型原子更新， AtomicBoolean AtomicInteger AtomicLong ，用法示例：
