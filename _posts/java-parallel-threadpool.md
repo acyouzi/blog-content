@@ -282,7 +282,7 @@ tags:
     shutdown 的主要作用是设置线程池的运行状态为 SHUTDOWN, 而非强制关闭。terminated() 在线程关闭时会被调用，可以重写这个方法监控线程关闭的情况。
 
 ### submit 与 execute 的区别
-submit 会把任务封装到一个 FutureTask 中，并且 submit 会返回一个 FutureTask 实例，这样我们就可以用这个实例去查询，获取任务的一些状态。
+submit 使用的是 Future 模式 , 把任务封装到一个 FutureTask 中，并且 submit 会返回一个 FutureTask 实例，这样我们就可以用这个实例去查询，获取任务的一些状态。
 
 ### ScheduledThreadPoolExecutor 的实现
 
