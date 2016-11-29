@@ -63,7 +63,7 @@ tags:
 ### schema 设计陷阱
 1. 太多的行，服务器层和存储引擎层之间通过行缓冲格式拷贝数据，然后在服务器层解码成各个列，如果列太多，转换的代价会非常高。
 2. 太多关联，如果希望查询执行快速并且并发性好，单个查询最好在12个表以内做关联。
-3. null 改用还得用，有时候可能用 -1 之类的值标示空缺业务逻辑会比 null 复杂很多。
+3. null 该用还得用，有时候可能用 -1 之类的值标示空缺业务逻辑会比 null 复杂很多。
 
 ### 范式和反范式
 1. 范式更新操作通常比反范式快，表通常更小，可以更好地存在内存里面
@@ -106,5 +106,86 @@ tags:
     unlock tables;
     show columns from xxx \g;
 
+### 索引
+mysql 中，索引是在存储引擎层实现而不是服务器层，所以没有统一的索引标准。
+
+#### B-Tree 索引
+实际上很多存储引擎（如 InnoDB）使用的是 B+Tree, 只不过MySQL 中使用 B-Tree 作为关键字，B-Tree 对数据列是顺序组织存储的，所以很适合范围查找。
+
+建立多值索引时，索引对多个值排序的依据是 create table 语句中定义索引时列的顺序，B-Tree 索引适用于全键值、键值范围、最左前缀查找。因为索引树中节点是有序的，索引还可以用于查询中的 order by 操作。
+
+#### 哈希索引
+mysql 中只有 Memory 引擎显式支持哈希索引，这也是 Memory 的默认索引类型，而且 Memory 引擎支持的是非唯一的哈希索引。 Memory 引擎同时支持非唯一索引。
+
+InnoDB 中有一种特殊的功能叫做自适应哈希索引，当InnoDB 注意到某些索引值被使用的非常频繁时，他会在内存中基于 B-Tree 之上再创建一个哈希索引。
+
+#### 自建哈希索引
+在数据库中建立新建一列保存哈希函数的哈希值，可以使用 CRC32 函数作为 hash 函数，然后在select 语句中拼接上 and xxx_crc=CRC32("info") 
+
+### 高性能索引策略
+1. 独立的列，在 where 子句中索引不能是表达式的一部分，也不能是函数的参数。
+2. 前缀索引，索引很大的字符串时会降低性能，通常可以索引开始的部分字符串,建立前缀索引需要选择一个可选择性比较合适的列的长度，使用如下公式计算：
+
+        select count( distinct left(city,5) )/count(*) from xxx;
+        // 建立索引
+        alter table xxx add key (my_col(5))
+
+3. 多列索引，建立多个单独的索引不是好策略，最好建立一个包含多个列的索引，通过 explain 语句查看 sql 执行如果在 extra 列中见到 Using union 等合并策略可能说明索引列建的很糟糕。
+4. 选择合适的索引列顺序，要考虑可选择性，同时也要查询条件的具体值（值的分布）有关。不要假设平均情况下的性能等于最坏的情况，最坏的情况可能很坏，可以考虑也谢数据库优化以外的方法避免最坏情况。
+5. 聚簇索引，是一种数据存储方式，所以一个表只能有一个聚簇索引。
+    
+    InnoDB 使用主键来做聚簇索引，如果没有主键会选择一个唯一的非空索引代替，如果没有这样的索引会隐式定义一个主键来做聚簇索引。InnoDB 只聚集在同一个页面中的数据，所以包含相邻主键的数据可能相聚甚远。
+
+6. 覆盖索引,如果一个索引包含所有需要查询的字段值，我们就称之为覆盖索引。当发起一个呗索引覆盖的查询时，在 explain 的 extra 列可以见到 "Using index" 的信息。
+7. 使用索引扫描来做排序. MySQL 有两种方式生成有序结果：通过排序操作和按索引顺序扫描。如果 explain 出来的 type 列值是 "index" 说明使用了索引扫描来做排序。
+    只有当索引的列顺序和 order by 子句顺序完全一致，并且所有列的排序方向完成一致，mysql才能使用索引结果做排序，如果需要查询需要关联多张表，则只有当 order by 子句引用字段全为第一个表时才能使用索引排序。
+8. 未使用索引，运行一段时间，然后查询 infomation schema.index statistics 查询每个索引的使用频率，然后可以删除不常用的索引。
+
+### 聚簇索引 
+是一种数据物理组织方式，InnoDB 使用主键来做聚簇索引.
+
+#### 聚簇索引的优点
+1. 可以把相关数据保存在一起。
+2. 数据访问更快，将索引和数据块保存在同一个 B-Tree 中。
+3. 使用索引覆盖查询可以直接使用叶节点中的主键值。
+
+#### 聚簇索引的缺点
+1. 插入速度依赖插入顺序，如果不按照主键顺序插入数据那就呵呵了。
+2. 更新聚簇索引代价很高。
+3. 页分裂问题，导致数据存储不连续
+4. 二级索引的叶子节点保存了引用行的主键，可能导致二级索引变大。
+5. 二级索引访问需要两次索引查找（因为二级索引叶子节点保存的是行的主键，而不是物理位置，所以需要再通过主键查找）
+
+#### InnoDB 主键选择
+如果正在使用 InnoDB 并且没有什么数据需要聚集，使用一个自增长的代理主键，这样可以保证数据行是按顺序写入，对于主键做关联操作性能也会更好。
+
+在高并发场景下，InnoDB中按主键顺序插入可能会造成明显的争用。一个是主键上界成为插入热点，另一个热点可能是自增长的锁机制。
+
+### in() 语句与范围条件
+查询只能使用索引的最左前缀，直到遇到第一个范围条件列。假设有索引 ( sex , country , age ) 希望查询 country = china and age between 18 and 25，为了能用上前面的索引，可以加上条件 sex in('M','F').
+
+### JOIN
+JOIN 按照功能大致分为如下三类：
+
+1. INNER JOIN（内连接）：取得两个表中存在连接匹配关系的记录。
+
+        // 下面两句结果相同
+        SELECT article.aid,article.title,user.username FROM article INNER JOIN user ON article.uid = user.uid
+        SELECT article.aid,article.title,user.username FROM article,user WHERE article.uid = user.uid
+
+        SELECT article.aid,article.title,user.username FROM article CROSS JOIN user
+
+    CROSS JOIN 与 INNER JOIN 的表现是一样的，在不指定 ON 条件得到的结果都是笛卡尔积，反之取得两个表完全匹配的结果。同时 INNER JOIN 与 CROSS JOIN 可以省略 INNER 或 CROSS 关键字。
+
+2. LEFT JOIN（左连接）：取得左表（table1）完全记录，即使右表（table2）并无对应匹配记录。
+
+        SELECT article.aid,article.title,user.username FROM article LEFT JOIN user ON article.uid = user.uid
+
+3. RIGHT JOIN（右连接）：与 LEFT JOIN 相反，取得右表（table2）完全记录，即是左表（table1）并无匹配对应记录。
+
+        SELECT article.aid,article.title,user.username FROM article RIGHT JOIN user ON article.uid = user.uid
+
+4. JOIN 还支持多表连接
+5. MySQL 没有提供 SQL 标准中的 FULL JOIN（全连接）。
 
 
