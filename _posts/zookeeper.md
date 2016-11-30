@@ -1,5 +1,5 @@
 ---
-title: zookeeper
+title: zookeeper 配置与使用
 date: 2016-11-30 13:14:45
 tags:
 ---
@@ -214,7 +214,11 @@ java api 常用的有：
 
 ### Leader 选举
 #### 选举过程中的集群状态
-    
+   
+    Looking			启动时，还没有找到Leader
+    Following 		参与投票，但没有成为Leader
+    Leading			参与投票，并且成为了Leader
+    Observing		不参与投票
 
 #### 票的结构
 
@@ -240,6 +244,51 @@ java api 常用的有：
     5. 改变机器大小
 
 #### 例子
-假设
+1. 假设有三个节点 zk1,zk2,zk3 myid 分别对应 1,2,3。组成一个集群，当集群首次启动时假设先启动zk1。zk1 根据配置文件知道集群中有三个机器。
+2. zk1 进行投票，第一次投票(1,0) 但是因为其他节点尚未启动，索引没有票数过半的机器，选举失败。这时候在启动 zk2 进行第二轮投票, zk1的投票还是 (1,0)，zk2 的投票是 (2,0).
+3. 然后 zk1 收到 zk2 的投票，首先比较 zxid 相同，然后比较 myid, 发现 zk2 的 myid 比较大，第三轮投票时 zk1 的投票变为 (2,0)
+4. zk2 获得两票，票数过半，成为Leader, 再启动zk3时，zk3 发现集群中已经有leader了就不再投票了。
 
-### set 数据
+### 写数据
+#### Zookeeper 集群中的几种角色
+    
+    Leader	        数据同步、发起选举
+    Follower	    响应客户端请求，并在选举的过程中投票
+    Observer	    响应客户端请求，不参与投票
+    Client	    	发送请求
+
+#### Zookeeper 请求处理的消息类型
+
+    Request     Learner -> Leader    事务请求交由 Leader 处理 
+    Proposel    Leader -> Follower   leader 发起投票
+    Ack         Follower -> Leader   proposal 投票的反馈
+    Commit      Leader -> Follower   收到过半 ack 后，告知节点提交事务
+    Infrom      Leader -> Observer   告知 Observer 更新数据
+
+#### 写数据过程
+![zookeeper 写数据](zookeeper-write-data.png)
+
+### 事务日志和snapshot
+事务日志存放于 dataDir/zk_log/ 目录下，是二进制格式的日志，需要使用 java LogFormatter log-file-name  来生成能够阅读的格式
+snapshot 存放于 dataDir/version-2/ 目录下，使用 java SnapshotFormatter  snapshot-file  来生成能够阅读的格式
+
+默认情况下进行 50000 - 100000 次事务后会进行一次快照存储，snapcount 默认值是 100000 ，但是为了避免整个集群到了 snapcount 集中一起备份导致性能问题，zookeeper 采用了随机备份策略
+
+    logcount > (snapcount/2 + rand )
+
+rand 是一个从 1 到 snapshot/2 的随机数。当上式为真时就进行 snapshot 备份。
+
+zookeeper 初始化时会先从 snapshot 加载数据，得到一个接近完整数据的集合，然后再根据事务日志订正数据。
+
+### 运维相关的命令
+可以通过 telnet 连接到 zookeeper 服务器通过以下命令查看服务器状态
+
+    stat 
+    conf
+    cons(连接信息)
+    dump(集群的所有会话信息)
+    envi
+    ruok( are you ok 的意思 )
+    wchs(Watcher 相关信息)
+    wchc(Watcher 相关信息)
+
