@@ -12,7 +12,7 @@ tags:
 ### 线程安全容器 
 java.util.concurrent 包下提供了一堆线程安全的容器：
    
-    ConcurrentHashMap
+    ConcurrentHashMap 把自己分成多段，每段是一个小的hashmap 如果写操作发生在不同的段上就能够并发执行。
     ConcurrentSkipListMap 跳表实现的 map
     ConcurrentLinkedDeque 双端队列
     ConcurrentLinkedQueue 

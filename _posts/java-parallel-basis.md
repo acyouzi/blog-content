@@ -138,7 +138,7 @@ wait notify notifyAll 属于 Object 类，所以任何对象都可以调用，�
         t2.start();
     }
 
-当 notify 把等待的线程唤醒时仍然需要重新获取锁才能继续执行。wait 与 sleep 的区别在于 wait 会释放所持有的锁，sleep 不会。
+当 notify 把等待的线程唤醒时仍然需要重新获取锁才能继续执行。wait 与 sleep 的区别在于 wait 会释放所持有的锁，sleep 不会。另外需要注意的是 notify 操作不会释放锁，如果我们希望 notify 之后立即执行 wait 线程则不能用这种方法，应该换成 CountDownLatch 实现。
 
 ### suspend && resume 
 suspend 在挂起进程是不会释放任何锁资源，所以不推荐使用。
