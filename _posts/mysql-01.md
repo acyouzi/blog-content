@@ -1,7 +1,11 @@
 ---
 title: 高性能 MySQL 笔记-基础
 date: 2016-11-27 23:12:24
+author: "acyouzi"
+# cdn: header-off
+# header-img: img/dog.jpg
 tags:
+	- MySQL
 ---
 
 ### 基础

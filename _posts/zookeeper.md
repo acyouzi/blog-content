@@ -1,7 +1,11 @@
 ---
 title: zookeeper 配置与使用
 date: 2016-11-30 13:14:45
+author: "acyouzi"
+# cdn: header-off
+# header-img: img/dog.jpg
 tags:
+	- ZooKeeper
 ---
 
 ### Zookeeper 一般使用场景
