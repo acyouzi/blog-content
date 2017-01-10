@@ -29,7 +29,7 @@ tags:
             SynchronousQueue 每一个插入操作都要等待对应的删除操作，不会在队列中真正保存任务。
             ArrayBlockingQueue 有界队列
             LinkedBlockingQueue 无界队列
-            PriorityBlockingQueue 带有优先级的任务队列
+            PriorityBlockingQueue 带有优先级的任务队列，这里边的元素都必须实现 Comparable 接口。
 
     * threadFactory 线程工厂用于创建线程
     * handler 拒绝策略，任务太多时来不及处理时使用。
