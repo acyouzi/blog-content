@@ -259,7 +259,7 @@ RingBuffer 配合 WorkerPool 使用的例子
 
 ### 其他
 1. RingBuffer 是一个特殊的环形队列，这个网上有很多介绍，这个环形队列特殊在没有尾指针，只维护了一个指向下一个可用位置的序号
-2. RingBuffer 大小必须是 2 的倍数
+2. RingBuffer 大小必须是 2 的指数倍
 3. 缓存填充，链接： [神奇的缓存填充]( http://ifeve.com/disruptor-cacheline-padding/ )
         
         // cpu 三级缓存都是按行为单位统一刷写，每行大小 64B
