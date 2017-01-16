@@ -1,5 +1,5 @@
 ---
-title: docker-basis
+title: Docker 容器与容器云-笔记-01-Docker 基本使用
 date: 2017-01-12 23:26:14
 author: "acyouzi"
 # cdn: header-off
@@ -9,121 +9,146 @@ tags:
 	- 容器
 ---
 
-### docker 基础命令
+### 首先是修补一个问题
+问题：当我们在 ubuntu 从官方源安装完 docker 后，如果尝试修改 /etc/default/docker 配置文件来改变 Docker daemon 启动参数时发现并不起作用。
 
-docker network create nw-link-test
-docker run -it --name link-test-01 --network nw-link-test  --link link-test-02:link-test-02 ubuntu-apt-163:16.04 /bin/bash
-docker run -it --name link-test-02 --network nw-link-test  --link link-test-01:link-test-01 ubuntu-apt-163:16.04 /bin/bash
+原因是 /lib/systemd/system/docker.service 文件压根就没有引用EnvironmentFile
+修改 docker.service 的 [Service] 部分的如下两行
 
+	EnvironmentFile=-/etc/default/docker
+	ExecStart=/usr/bin/dockerd $DOCKER_OPTS -H fd://
 
-namespace 做资源隔离
+然后重启容器
 
-uts 
-ipc
-pid
-network
-mount
-user
+	systemctl daemon-reload
+	systemctl restart docker
 
-cgroup 做资源限制
+### Docker 基本知识
+1. docker 使用 namespace 来实现资源隔离，使用 cgroup 做资源限制，namespace 有如下几种
+		
+		root@ubuntu:~# ll /proc/$$/ns/
+		total 0
+		dr-x--x--x 2 root root 0 Jan 16 00:33 ./
+		dr-xr-xr-x 9 root root 0 Jan 16 00:21 ../
+		lrwxrwxrwx 1 root root 0 Jan 16 00:33 ipc -> ipc:[4026531839]
+		lrwxrwxrwx 1 root root 0 Jan 16 00:33 mnt -> mnt:[4026531840]
+		lrwxrwxrwx 1 root root 0 Jan 16 00:33 net -> net:[4026531957]
+		lrwxrwxrwx 1 root root 0 Jan 16 00:33 pid -> pid:[4026531836]
+		lrwxrwxrwx 1 root root 0 Jan 16 00:33 user -> user:[4026531837]
+		lrwxrwxrwx 1 root root 0 Jan 16 00:33 uts -> uts:[4026531838]
 
-联合挂载
+2. 容器的文件系统采用联合挂载，有分层挂载写时复制，内容寻址，联合挂载等几种特性。
 
-	分层
-	写时复制
-	内容寻址
-	联合挂载
-
-Docker 镜像组织方式
-
+3. docker 镜像实际上可以分为三层,默认存放在 /var/lib/docker/image 目录下
+	
 	可读写部分
 	init-layer
 	只读层
 
-镜像存在
-/var/lib/docker/image/aufs
+### Docker 存储驱动
+docker 支持多种存储驱动，有 devicemapper、aufs、vfs、overlay 等，默认使用 aufs，支持联合挂载( 将不同目录挂载到同一个目录上，这个过程对用户是透明的。一般可读写层在上，下层是只读层)，overlay 是一种新型联合文件系统，理论上性能好于 aufs
 
-Docker 存储驱动
+/var/lib/docker/image/aufs 用于存放镜像相关元数据
+/var/lib/docker/aufs 下边有 diff layers mnt 三个目录
 
-	aufs
-		支持联合挂载
-			支持将不同目录挂载到同一个目录上，这个过程对用户是透明的。一般可读写层在上，下层是只读层。
-		/var/lib/docker/image/aufs 用于存放镜像相关元数据
-		/var/lib/docker/aufs 下边有 diff layers mnt 三个目录
-			/mnt 为 aufs 挂载目录
-			/diff 为实际数据来源，包括只读层和可读可写层
-			/layers 为每层依赖的层描述文件 就是这个层依赖哪些层
+	/mnt 为 aufs 挂载目录
+	/diff 为实际数据来源，包括只读层和可读可写层
+	/layers 为每层依赖的层描述文件 就是这个层依赖哪些层
+
+在容器启动时会在 /mnt 和 /diff 目录下见到 /< mountID >-init 层，这个就是上面提到的镜像三层中的 init-layer
+
+	/< mountID >-init 层作为最后一层只读层，用于挂载并重新生成以下文件
+		/dev/pts
+		/dev/shm
+		/proc
+		/sys
+		/.dockerinit
+		/.dockerenv
+		/etc/resolve.conf
+		/etc/host
+		/etc/hostname
+		/dev/console
+		/etc/mtab
+
+因为这些文件与容器内的环境息息相关，不适合作为打包镜像文件内容，所以这层docker 做了特殊处理，只在启动时自动添加，并且利用用户配置自动生成内容，只用容器在运行过程中被改动，并且 commit 了，才会持久化，否则这一层内容不会被保存。
+
+#### 存储驱动实验
+1. 找到联合挂载中的可读可写层
+
+		查看短ID
+		docker ps
+		cd /var/lib/docker/ 
 		
-			/<mountID>-init 层作为最后一层只读层，用于挂载并重新生成一下文件
-				/dev/pts
-				/dev/shm
-				/proc
-				/sys
-				/.dockerinit
-				/.dockerenv
-				/etc/resolve.conf
-				/etc/host
-				/etc/hostname
-				/dev/console
-				/etc/mtab
+		查看 mountID
+		cat image/aufs/layerdb/mounts/2313d627f4df7b7cec52cd8eb1cd9c628fedfa8b93cbf5095de87d3d9958fc7a/mount-id
+		
+		得到 mountID 为 4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e
+		然后找到镜像挂载位置
+		cd /var/lib/docker/aufs/mnt/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e 
+		
+		查看大小， 在容器启动的状态下挂载文件
+		du --max-depth=1 -h ./aufs/mnt | grep 4a6f315dfb3 
 
-				因为这些文件与容器内的环境息息相关，不适合作为打包镜像文件内容，所以这层docker 做了特殊处理，只在启动时自动添加，并且利用用户配置自动生成内容，只用容器在运行过程中被改动，并且 commit 了，才会持久化，否则这一层内容不会被保存。
+		进入容器，在root 目录下创建一个文件，然后关闭容器
+		docker exec -it test /bin/bash
+		
+		停止后查看镜像挂载目录
+		发现 /var/lib/docker/aufs/mnt/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e/  目录空了
+		/var/lib/docker/aufs/diff/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e/ 下有一个 root/ 目录，目录下边是我们修改的文件
 
-				docker ps 查看短ID
-				cd /var/lib/docker/ 
-				cat 查看 mountID
-				cat image/aufs/layerdb/mounts/2313d627f4df7b7cec52cd8eb1cd9c628fedfa8b93cbf5095de87d3d9958fc7a/mount-id
-				得到 mountID 为 4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e
-				然后找到镜像挂载位置
-				/var/lib/docker/aufs/mnt/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e 
+	这就是联合挂载的效果
 
-				du --max-depth=1 -h ./aufs/mnt | grep 4a6f315dfb3 查看大小， 在容器启动的状态下挂载文件
-
-				进入容器，在root 目录下创建一个文件，然后关闭容器
-				进入命令 docker exec -it test /bin/bash
-				停止后查看镜像挂载目录
-				发现
-					/var/lib/docker/aufs/mnt/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e/  目录空了
-					/var/lib/docker/aufs/diff/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e/ 下有一个 root/ 目录，目录下边是我们修改的文件
-
-				这就是联合挂载的效果
-
-				然后再次启动容器，进入容器，修改 /etc/hosts 文件。
-				然后进入 /var/lib/docker/aufs/diff/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e/ 
-				发现 这里并没有 etc/hosts 文件
-				然后进入 /var/lib/docker/aufs/diff/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e-init/
-				发现存在 etc/hosts 文件，但是没有任何内容。
-				而且重启容器之后，修改被还原了。
-
-				这是 init 层的效果
+2. init-layer 效果查看
 	
-	devicemapper
-	vfs
-	overlay
-		新型联合文件系统，理论上性能好于 aufs
+		启动容器，进入容器，修改 /etc/hosts 文件。
+		
+		然后进入 /var/lib/docker/aufs/diff/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e/ 
+		
+		发现 这里并没有 etc/hosts 文件
+		
+		然后进入 /var/lib/docker/aufs/diff/4a6f315dfb32c50e7ff54589d52f0f93acf1a74fa50c381bb35d54c6bbb41e3e-init/
+		
+		发现存在 etc/hosts 文件，但是没有任何内容。
+		
+		而且重启容器之后，修改被还原了。
+
+	这是 init 层的效果
 
 
-数据卷 volume
 
+
+### 数据卷 volume
 docker volume 命令
+
 	create      Create a volume
 	inspect     Display detailed information on one or more volumes
 	ls          List volumes
 	rm          Remove one or more volumes
 
--v 挂载数据卷
+创建容器的时候使用 -v 挂载数据卷,一个容器可挂载多个 volume
+
 	-v /xxx 自动创建一个 volume 并挂载到容器中
 	-v volume_name:/xxx 挂载一个已经存在的 volume 
-	-v /host/dir:/xxx 挂载一个本地目录到容器
-	一个容器可挂载多个 volume 
+	-v /host/dir:/xxx 挂载一个本地目录到容器 
+	--volume-from container-xx  挂载 container-xx 挂载的全部 volume
 
-	dockerfile 中挂载 volume 不能指定要挂载的文件。为了可移植性，只能自动创建
-	共享 volume
-		--volume-from container-xx  挂载 container-xx 挂载的全部 volume
+dockerfile 中挂载 volume 不能指定要挂载的外部文件。为了可移植性，只能自动创建。
+
+### --link 网络
+容器创建时可以通过 --link 指定关联的容器，然后 Docker 会自动维护映射关系，但是只能链接已经存在的容器，所以使用 link 作为容器间通信的方法必须注意启动顺序。
+
+	--link container:alies
+
+但是如果自己创建一个网络把容器网络设置为自己创建的网络，在创建容器 link 时就能使用原本不存在的容器了。这里貌似是因为 Docker 更改了处理 link 的方式。
+
+	docker network create nw-link-test
+	docker run -it --name link-test-01 --network nw-link-test  --link link-test-02:link-test-02 ubuntu-apt-163:16.04 /bin/bash
+	docker run -it --name link-test-02 --network nw-link-test  --link link-test-01:link-test-01 ubuntu-apt-163:16.04 /bin/bash
 
 
-容器网络
-	libnetwork 支持5种内置驱动
+### 容器网络
+1. libnetwork 支持5种内置驱动
+	
 		bridge 驱动
 		host 驱动 
 			这种模式下容器没有网络协议栈，没有独立的 network namespace
@@ -134,7 +159,8 @@ docker volume 命令
 		null 驱动
 			这种模式下有自己的 network namespace, 但是没有进行任何网络配置
 
-	使用 docker network 管理网络
+2. 使用 docker network 管理网络
+	
 		connect     Connect a container to a network
 		create      Create a network
 			可以指定驱动类型，默认是 bridge 
@@ -380,7 +406,131 @@ network namespace
 			pipework osv-br0 container dhcp @12
 			@ 后面是 vlan 号
 		
+	跨主机通信
+		桥接
+			容器占用主机IP,大量Docker容器可能引起广播风暴
+			每台机器上的 Docker 容器可能获得相同的IP地址，可以通过 --fixed-cidr 参数限定不同主机的所在的网段。
+
+			方法是将 eth1 桥接到 docker0 上
+				可以通过命令
+					brclt addif docker0 eth1
+				也可以写在配置文件中
+					auto docker0
+					Iface docker0 inet static
+						address xxx.xxx.xxx.xxx
+						netmask xxx
+						bridge_ports eth1
+						bridge_stp off
+						bridge_fd 0
+			
+		直接路由
+			在主机中添加静态路由来实现，主机中的 docker 需要在不同的子网
+			配置主机 A 的 docker 在 172.17.1.1/24，主机 B 的 docker 在 172.17.2.1/24 
+			在主机 A 上添加路由 目的地地址为 172.17.2.0/24 的包转发到 B
+			在主机 B 上添加路由 目的地地址为 172.17.1.0/24 的包转发到 A
+
+			# 主机 A
+			ip addr del 172.17.0.1/16 dev docker0
+			ip addr add 172.17.1.1/24 dev docker0
+			route add  -net 172.17.2.0/24  gw 192.168.192.133
+
+			iptables -t nat -F POSTROUTING
+			iptables -t nat -A POSTROUTING -s 172.17.1.0/24 ! -d 172.17.0.0/16  -j MASQUERADE
+
+			# 主机 B
+			ip addr del 172.17.0.1/16 dev docker0
+			ip addr add 172.17.2.1/24 dev docker0
+			route add -net 172.17.1.0/24 gw 192.168.192.132
+			
+			iptables -t nat -F POSTROUTING
+			iptables -t nat -A POSTROUTING -s 172.17.2.0/24 ! -d 172.17.0.0/16 -j MASQUERADE
+
+		ovs 划分 vlan
+			如果不划分 vlan 当网络中机器足够多时会导致广播风暴。
+			vlan 相关概念
+				access 端口： access 端口都会分配一个 vlan id ，标示他所连接的设备属于哪个 vlan .当数据从外界通过 access 端口时，数据本身是不带 tag 的。access 端口给数据打上 tag.
+				当数据从 access 端口发送时，vid 必须与 端口的 vid 一致，否则丢弃数据，当数据经过 access 端口发出时，会先将帧的 tag 信息去掉再发送。
+
+				trunk 端口： 声明一组 vid ， 只允许带这些 vid 的数据帧通过，用于交换机之间通信，数据进出都带 tag
+
+			单主机 vlan 划分
+				docker run -itd --name ovs-test-01 --network none ubuntu:16.04 
+				docker run -itd --name ovs-test-02 --network none ubuntu:16.04 
+				docker run -itd --name ovs-test-03 --network none ubuntu:16.04 
+				docker run -itd --name ovs-test-04 --network none ubuntu:16.04 
 		
+				pipework ovs0 ovs-test-01 172.20.0.2/24 @100
+				pipework ovs0 ovs-test-02 172.20.0.3/24 @100
+				pipework ovs0 ovs-test-03 172.20.0.4/24 @200
+				pipework ovs0 ovs-test-04 172.20.0.5/24 @200
+				
+				然后互相 ping 一下试试
+
+				可以查看创建的网桥 ovs-vsctl show
+				Bridge "ovs0"
+					Port "veth1pl1144"
+						tag: 100
+						Interface "veth1pl1144"
+					Port "veth1pl1226"
+						tag: 200
+						Interface "veth1pl1226"
+					Port "veth1pl1261"
+						tag: 200
+						Interface "veth1pl1261"
+					Port "ovs0"
+						Interface "ovs0"
+							type: internal
+					Port "veth1pl1187"
+						tag: 100
+						Interface "veth1pl1187"
+					
+			多主机划分 vlan 
+				将主机的一个网卡加入到 ovs 交换机中，设为 trunk 端口。
+				ip link set eth1 promisc on
+				ovs-vsctl add-port ovs0 eth1
+
+			Overly 隧道模式
+				即将一种协议包装在另一种协议中传输的技术，当前的 Overly 技术主要有 Vxlan 和 NVGRE 技术
+
+				步骤
+					1. 设置 DOCKER_OPTS="--fixed-cidr=172.17.2.0/24"  在 /etc/default/docker 文件中
+					2. 有个 bug 导致这个配置不起作用，修改 /lib/systemd/system/docker.service
+						EnvironmentFile=-/etc/default/docker
+						ExecStart=/usr/bin/dockerd $DOCKER_OPTS -H fd://
+					3. 配置网络
+						ovs-vsctl add-br ovs0
+						brctl addif docker0 ovs0
+						ovs-vsctl add-port ovs0 gre0 -- set interface gre0 type=gre options:remote_ip=192.168.192.133
+					
+					另一台主机相同
+
+Dockerfile 最佳实践
+	RUN 命令
+		推荐 RUN ["executable","param","param"] 写法
+	CMD 命令
+		推荐 CMD ["executable","param","param"] 写法
+		如果指定多条，只有最后一条会起作用。如果用户在创建容器时指定了命令，会覆盖掉 CMD 指定的命令
+	ENTRYPOINT 
+		推荐 ENTRYPOINT ["executable","param","param"] 写法	
+		run 命令指定的参数能覆盖掉 CMD 但是不能覆盖 ENTRYPOINT
+		如果使用 ENTRYPOINT "command" 这种shell格式，程序运行在 bin/sh -c 中, 不能接收信号
+	EXPOSE 
+		不要在 dockerfile 中做端口映射，可以仅仅暴漏端口
+		可以写作 EXPOSE 80  不要写作 EXPOSE 80:8080
+
+	
+容器监控
+	docker stats 显示 cpu 内存 信息 
+	docker top 查看容器中进程运行的情况
+
+常用的监控软件 
+	cAdvisor,Datadog
 
 
+			
+
+
+
+	
+	
 
