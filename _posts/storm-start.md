@@ -344,8 +344,6 @@ acker 数量可以通过 Config.TOPOLOGY_ACKERS 设置，默认值是 1.
         }
     }
 
-如果存在后继 bolt 在调用 collector.emit() 时，也会调用ack() 方法不用显示调用 ack 方法。
-
 ## drpc
 实现从远程调用storm集群的计算资源，而不需要连接到集群的某一个节点
 
