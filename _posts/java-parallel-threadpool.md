@@ -342,3 +342,21 @@ ScheduledThreadPoolExecutor 有一个内部类，DelayedWorkQueue 使用数组�
         }
     }
 
+### submit 简介
+ScheduledThreadPoolExecutor 中 submit 有三个重载方法
+
+    // 最后被封装为了 Callable
+    public Future<?> submit(Runnable task)
+    // 执行完返回 result
+    public <T> Future<T> submit(Runnable task, T result)
+    // 执行完返回 call() 方法的返回值
+    public <T> Future<T> submit(Callable<T> task)
+
+其中 submit(Runnable task, T result) 是把 task 封装到一个 RunnableAdapter 类中了，这个类也实现了 Callable 接口，并对 call 方法进行了重写
+    
+    public T call() {
+        task.run();
+        return result;
+    }
+
+submit 实现是基于上面介绍的 ScheduledThreadPoolExecutor 实现，在 submit 中调用 schedule 方法，把一个 ScheduledFutureTask 提交到任务队列。
