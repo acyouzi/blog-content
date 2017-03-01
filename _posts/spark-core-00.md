@@ -1,5 +1,5 @@
 ---
-title: Spark源码阅读笔记-Core-00-Master启动流程
+title: Spark源码-Core-00-Master启动流程
 date: 2017-02-27 22:10:33
 tags:
     - spark
@@ -125,27 +125,27 @@ tags:
     
     然后在 dispatcher 中最关键的是下面这个方法，其余的 post 方法都是传递不同的 InboxMessage 子类消息类型到 postMessage
 
-      private def postMessage(
-          endpointName: String,
-          message: InboxMessage,
-          callbackIfStopped: (Exception) => Unit): Unit = {
-        val error = synchronized {
-          // 获取对应 endpoint 对象，根据名字，endpoints 是一个 hashmap
-          val data = endpoints.get(endpointName)
-          if (stopped) {
-            Some(new RpcEnvStoppedException())
-          } else if (data == null) {
-            Some(new SparkException(s"Could not find $endpointName."))
-          } else {
-            // 投递消息到特定的 endpoint 的消息队列
-            data.inbox.post(message)
-            // receivers 是一个队列，存在这个队列里面的 endpoint 代表有消息要处理
-            receivers.offer(data)
-            None
+          private def postMessage(
+              endpointName: String,
+              message: InboxMessage,
+              callbackIfStopped: (Exception) => Unit): Unit = {
+            val error = synchronized {
+              // 获取对应 endpoint 对象，根据名字，endpoints 是一个 hashmap
+              val data = endpoints.get(endpointName)
+              if (stopped) {
+                Some(new RpcEnvStoppedException())
+              } else if (data == null) {
+                Some(new SparkException(s"Could not find $endpointName."))
+              } else {
+                // 投递消息到特定的 endpoint 的消息队列
+                data.inbox.post(message)
+                // receivers 是一个队列，存在这个队列里面的 endpoint 代表有消息要处理
+                receivers.offer(data)
+                None
+              }
+            }
+            error.foreach(callbackIfStopped)
           }
-        }
-        error.foreach(callbackIfStopped)
-      }
     
 7. 截止到上面的内容都是在 handler 所处的线程中完成的，handle 中完成了到某个具体 endpoint 的分发，但是分发完在哪个处理呢？
 
@@ -307,40 +307,40 @@ tags:
     
     postToOutbox 函数首先判断 client 连接还存在不存在， 如果存在则直接发送消息，否则判断以前有没有创建过连接到给定地 outbox，如果没有就新建一个，如果已经创建了就返回原来的。然后再通过 outBox 的 send() 方法把消息送进对应 outBox 队列。
     
-      private def postToOutbox(receiver: NettyRpcEndpointRef, message: OutboxMessage): Unit = {
-        if (receiver.client != null) {
-          // 这里的 client 是  org.apache.spark.network.client.TransportClient
-          // 这个东西是 java 写的在 common/network-common 包下面
-          // 实际上是对底层 netty 的封装
-          message.sendWith(receiver.client)
-        } else {
-          require(receiver.address != null,
-            "Cannot send message to client endpoint with no listen address.")
-          // 获取 outbox
-          val targetOutbox = {
-              val outbox = outboxes.get(receiver.address)
-            if (outbox == null) {
-              val newOutbox = new Outbox(this, receiver.address)
-              val oldOutbox = outboxes.putIfAbsent(receiver.address, newOutbox)
-              if (oldOutbox == null) {
-                newOutbox
-              } else {
-                oldOutbox
-              }
+          private def postToOutbox(receiver: NettyRpcEndpointRef, message: OutboxMessage): Unit = {
+            if (receiver.client != null) {
+              // 这里的 client 是  org.apache.spark.network.client.TransportClient
+              // 这个东西是 java 写的在 common/network-common 包下面
+              // 实际上是对底层 netty 的封装
+              message.sendWith(receiver.client)
             } else {
-              outbox
+              require(receiver.address != null,
+                "Cannot send message to client endpoint with no listen address.")
+              // 获取 outbox
+              val targetOutbox = {
+                  val outbox = outboxes.get(receiver.address)
+                if (outbox == null) {
+                  val newOutbox = new Outbox(this, receiver.address)
+                  val oldOutbox = outboxes.putIfAbsent(receiver.address, newOutbox)
+                  if (oldOutbox == null) {
+                    newOutbox
+                  } else {
+                    oldOutbox
+                  }
+                } else {
+                  outbox
+                }
+              }
+              if (stopped.get) {
+                // It's possible that we put `targetOutbox` after stopping. So we need to clean it.
+                outboxes.remove(receiver.address)
+                targetOutbox.stop()
+              } else {
+                // outBox 的 send 方法。
+                targetOutbox.send(message)
+              }
             }
           }
-          if (stopped.get) {
-            // It's possible that we put `targetOutbox` after stopping. So we need to clean it.
-            outboxes.remove(receiver.address)
-            targetOutbox.stop()
-          } else {
-            // outBox 的 send 方法。
-            targetOutbox.send(message)
-          }
-        }
-      }
     
 12. 这里可以和 inbox 做一下对比，inbox 是有一个专门的线程池负责处理接收到的消息，但是 outbox 在他的消息的产生线程中好像就可以直接发送，那么这里为什么还要有与入队列相关的操作呢？
 
