@@ -75,12 +75,13 @@ invokedynamic 会根据方法签名去 BootstrapMethods 中拿到方法的一个
 这里还有一个问题，showInf 接受的函数被对应到了 Function1 接口，那么如果一个方法接受的函数对应不到某个接口该怎么办呢？可以看一下 scala 包下的相关 trait ,从 0 一直到 22 也就是最多可以对应到一个接受 22 个参数的函数。至于再多了什么情况我我懒得试了。
 
 在 scala 包下边还有 Tuple 类 22个，从1 到 22，也就是说 tuple 里边应该最多只有 22个元素，同时每个 tuple 对应一个 Product 所以也就有 1 到22 个 Product
+
 ## 下划线使用
 下划线跟在一个方法后面可以把方法转换为函数。
 
     val func = myfunc _
  
-下划线在 lambda 表达式类型自动推导中可以简化书写，就是一些语法糖，没什么好主意的，会用就行了。
+下划线在 lambda 表达式类型自动推导中可以简化书写，就是一些语法糖，没什么好注意的，会用就行了。
 
     val map = Map("e"->1,"a"->1,"d"->1,"c"->1,"b"->1)
     map.map(_._1).foreach(println(_));
@@ -100,6 +101,39 @@ invokedynamic 会根据方法签名去 BootstrapMethods 中拿到方法的一个
     }
 
 闭包能够访问到超出作用域的变量，在 java 中是因为生成的代理类的实例中持有相关变量的引用。
+
+实际上闭包被翻译成了一个对象，这个对象继承自 AbstractFunction，类名中带有 $anonfun$，引用的外部变量在构造函数中传入，具体业务逻辑放到 apply 方法中。
+
+    public final class Main$$anonfun$test$1 extends AbstractFunction1<String, BoxedUnit> implements Serializable {
+        public static final long serialVersionUID = 0L;
+        private final ObjectRef say$1;
+        
+        public final void apply(final String name) {
+            Predef$.MODULE$.println((Object)new StringContext((Seq)Predef$.MODULE$.wrapRefArray((Object[])(String[])new String[] { "", " ", "" })).s((Seq)Predef$.MODULE$.genericWrapArray((Object)new Object[] { (String)this.say$1.elem, name })));
+        }
+        
+        public final /* bridge */ Object apply(final Object v1) {
+            this.apply((String)v1);
+            return BoxedUnit.UNIT;
+        }
+        
+        public Main$$anonfun$test$1(final ObjectRef say$1) {
+            this.say$1 = say$1;
+            super();
+        }
+    }
+    
+而对方法的调用变成了如下的样子，注意 say 变量的类型变为了 ObjectRef 类型。
+
+    public Function1<String, BoxedUnit> test() {
+        final ObjectRef say = ObjectRef.create((Object)"Hi!");
+        return (Function1<String, BoxedUnit>)new Main$$anonfun$test.Main$$anonfun$test$1(say);
+    }
+     
+    public void main(final String[] args) {
+        final Function1 hello = this.test();
+        hello.apply((Object)"acyouzi");
+    }
 
 ## Currying函数
 科里化是一种将具备两个参数的函数 f 转化为使用一个参数的函数 g , 并且这个函数的返回值也是一个函数，他会作为一个新函数参数。
