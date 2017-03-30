@@ -10,10 +10,11 @@ tags:
 3. driver 使用 DAGScheduler 划分 stage,使用 TaskSchedulerImpl 完成 task 调度
 4. 重点是 master 对 executor 的资源调度，调度分为 spreadOut 模式和非 spreadOut 模式。
 5. spreadOut 模式会尽量把 executor 分散到不同机器上，而非 spreadOut 模式会尽可能使资源集中。
-6. 如果 spark.executor.cores 参数没有配置则 oneExecutorPerWorker 变量为 true，结果会导致本来应该在同一个 worker 上启动的多个 executor 变成了一个。也就是说配置 spark.executor.cores 会导致同一个 app 的 executor 在每个 worker 上只能启动一个,
-7. 一个 worker 上相同 worker 的 executor 只启动一个，则在分配资源时对于内存只考虑一个 executor 的消耗，但是 cpu 会分配多个。
-8. executor 的调度个人感觉比较重要，所以在代码中做了较多注释
-9. 根据运行日志来看代码还是挺有用的，把日志级别设置为 debug, 可以把代码和日志输出互相验证。
+6. 如果 spark.executor.cores 参数没有配置则 oneExecutorPerWorker 变量为 true，结果会导致本来应该在同一个 worker 上启动的多个 executor 变成了一个。也就是说不配置 spark.executor.cores 会导致同一个 app 的 executor 在每个 worker 上只能启动一个。
+7. 如果没有配置 spark.executor.cores 则 minCoresPerExecutor 的默认大小是 1，也就是说默认每个 executor 分配一个核。
+8. 一个 worker 上相同 worker 的 executor 只启动一个时，则在分配资源时对于内存只考虑一个 executor 的消耗，但是 cpu 会分配多个。
+9. executor 的调度个人感觉比较重要，所以在代码中做了较多注释
+10. 根据运行日志来看代码还是挺有用的，把日志级别设置为 debug, 可以把代码和日志输出互相验证。
 
 ## 提交流程
 spark 的提交命令格式如下:
