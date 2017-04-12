@@ -206,4 +206,4 @@ tags:
 最后，如果应用的实时性需求大于准确性，那么一块数据丢失后我们也可以选择忽略、不恢复失效的源头数据。
 
 忽略可以分为细粒度忽略和粗粒度忽略，具体请看
-[https://github.com/lw-lin/CoolplaySpark/blob/master/Spark%20Streaming%20%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E7%B3%BB%E5%88%97/4.1%20Executor%20%E7%AB%AF%E9%95%BF%E6%97%B6%E5%AE%B9%E9%94%99%E8%AF%A6%E8%A7%A3.md#4-忽略](https://github.com/lw-lin/CoolplaySpark/blob/master/Spark%20Streaming%20%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E7%B3%BB%E5%88%97/4.1%20Executor%20%E7%AB%AF%E9%95%BF%E6%97%B6%E5%AE%B9%E9%94%99%E8%AF%A6%E8%A7%A3.md#4-忽略)
+[ 超超超连接 ](https://github.com/lw-lin/CoolplaySpark/blob/master/Spark%20Streaming%20%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E7%B3%BB%E5%88%97/4.1%20Executor%20%E7%AB%AF%E9%95%BF%E6%97%B6%E5%AE%B9%E9%94%99%E8%AF%A6%E8%A7%A3.md#4-忽略)
