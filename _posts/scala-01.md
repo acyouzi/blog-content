@@ -1,8 +1,9 @@
 ---
 title: scala 学习 01 基本语法
 date: 2017-02-17 01:52:17
+description: 
 tags:
-    - scala
+	- scala
 ---
 # 简述
 文章是对最近正在学习的 scala 的一些总结，因为 scala 语法相比于传统编程语言有点变化太大了，所以为了更透彻的了解这些语法的特性，很多 scala 语法，我会在这一系列的 scala 学习文章中尝试把 scala 字节码翻译到 java 语言，以此来加深理解。

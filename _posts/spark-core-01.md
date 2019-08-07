@@ -1,8 +1,9 @@
 ---
 title: Spark源码-Core-01-Worker注册流程
 date: 2017-03-01 10:56:02
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 简介
 worker 的启动流程与 master 并无二致，这里不做过多介绍。下面先来总结一下 worker 注册的相关工作。

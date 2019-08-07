@@ -1,8 +1,9 @@
 ---
 title: Spark源码-streaming-04-几个重要的算子
 date: 2017-04-12 20:59:48
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 总结
 1. DStream 的算子就是对 RDD 的巧妙组合

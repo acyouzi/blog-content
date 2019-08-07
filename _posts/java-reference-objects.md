@@ -2,11 +2,9 @@
 title: 译 · java reference objects
 date: 2016-11-07 22:08:15
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- References
+    - java
 ---
 
 ### 原文链接

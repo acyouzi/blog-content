@@ -2,11 +2,9 @@
 title: Java ASM 库使用及 AOP 示例
 date: 2016-12-09 19:29:53
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- asm 
-	- java
+    - java
 ---
 
 ASM 是一个用来操纵字节码的框架，能被用来动态生成类或者增强现有类的功能。

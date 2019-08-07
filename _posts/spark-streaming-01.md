@@ -1,8 +1,9 @@
 ---
 title: Spark源码-streaming-01-Job 生成
 date: 2017-04-05 21:35:47
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 总结
 1. 在看代码之前一直以为 Dstream 继承自 RDD, 原来他们之间并没有继承关系，DStream 是在 jobGenerator 时才创建了计算所需的 RDD。

@@ -2,11 +2,9 @@
 title: ReentrantLock 重入锁使用与实现
 date: 2016-11-20 23:12:03
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 
 ### ReentrantLock 重入锁

@@ -2,11 +2,9 @@
 title: 读写锁解读
 date: 2016-11-22 21:43:31
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 
 ### 读写锁

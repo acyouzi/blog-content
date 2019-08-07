@@ -2,11 +2,9 @@
 title: 线程池 ThreadPoolExecutor 的使用和实现分析
 date: 2016-11-25 17:57:38
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 线程池
+    - 并发
 ---
 
 ### ThreadPool 使用

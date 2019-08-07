@@ -1,8 +1,9 @@
 ---
 title: Spark源码-streaming-00-ReceiverTracker 数据接收
 date: 2017-04-03 23:56:19
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 问题
 在开始了解 Streaming 架构之前，我有下面一些思考：

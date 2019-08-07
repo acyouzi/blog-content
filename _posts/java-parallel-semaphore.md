@@ -2,11 +2,9 @@
 title: 信号量的原理及应用
 date: 2016-11-22 19:22:14
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 
 ### 信号量方法介绍

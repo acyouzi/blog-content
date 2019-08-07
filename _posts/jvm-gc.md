@@ -2,11 +2,9 @@
 title: jvm垃圾收集与内存分配
 date: 2016-11-05 16:35:56
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- jvm
-	- 垃圾收集
+    - jvm
 ---
 
 ### 对象还活着吗

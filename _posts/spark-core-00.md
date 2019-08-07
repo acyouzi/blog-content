@@ -1,8 +1,9 @@
 ---
 title: Spark源码-Core-00-Master启动流程
 date: 2017-02-27 22:10:33
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 简介
 其实这部分应该算是总结吧，也是读完 master 启动部分代码的一些理解:

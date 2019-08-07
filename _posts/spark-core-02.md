@@ -1,8 +1,9 @@
 ---
 title: Spark源码-Core-02-Driver启动和Executor调度
 date: 2017-03-03 21:06:56
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 总结
 1. spark-submit 使用 client 模式启动会直接在本地启动 driver，在 worker 中启动调度启动 driver

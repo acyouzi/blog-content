@@ -2,11 +2,9 @@
 title: JVM 类加载阶段与类加载器
 date: 2016-11-11 19:18:08
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- jvm
-	- class
+    - jvm
 ---
 
 ### 类的生命周期

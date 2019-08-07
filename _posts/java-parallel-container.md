@@ -2,11 +2,9 @@
 title: 线程安全容器
 date: 2016-11-26 12:12:17
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 
 ### 线程安全容器 

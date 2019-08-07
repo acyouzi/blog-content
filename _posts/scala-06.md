@@ -1,8 +1,9 @@
 ---
 title: scala 学习 06 函数
 date: 2017-02-20 01:08:41
+description: 
 tags:
-    - scala
+	- scala
 ---
 函数的的实现使用了 jdk1.7 中新引入的指令 invokedynamic, 其他的 invoke 指令在类加载的解析阶段就已经完成从符号引用到直接引用的替换，但是这条指令会等到实际调用时才进行解析。 java8 的 lambda 表达式调用也是使用这条指令。
 

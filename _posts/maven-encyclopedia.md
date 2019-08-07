@@ -2,8 +2,9 @@
 title: Maven 配置使用以及常用插件总结
 date: 2017-02-17 01:40:07
 author: "acyouzi"
+description: 
 tags:
-	- maven
+    - java
 ---
 # 概述
 一直在用 maven 学的东西零零散散的，不成系统。正好抽空把 maven 我所了解的东西整理了一下，备忘，也方便以后查找。

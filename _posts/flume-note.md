@@ -1,9 +1,9 @@
 ---
 title: flume 全接触
 date: 2017-01-23 13:33:28
+description: 
 tags:
-    - flume
-    - 大数据
+    - java
 ---
 ### flume 是什么
 flume 是分布式，可靠，高可用的日志采集传输系统。

@@ -2,9 +2,9 @@
 title: spring 数据库集成以及缓存
 date: 2017-01-17 14:47:19
 author: "acyouzi"
+description: 
 tags:
-    - spring
-    - java
+	- java
 ---
 
 ### Spring Jdbc

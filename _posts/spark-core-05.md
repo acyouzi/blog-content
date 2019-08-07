@@ -1,8 +1,9 @@
 ---
 title: Spark源码-Core-05-persist&&checkpoint&&blockManager
 date: 2017-03-26 10:40:48
+description: 
 tags:
-    - spark
+	- spark
 ---
 1. cache 方法实际上调用的是 MEMORY_ONLY level 的 Persist
 2. 设置过 persist 的 rdd 在调用时会在实际计算时调用 getOrCompute,如果存在直接从缓存中拿结果，否则重新计算并交给 blockManager 缓存

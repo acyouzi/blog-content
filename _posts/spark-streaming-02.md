@@ -1,8 +1,9 @@
 ---
 title: Spark源码-streaming-02-接收数据的可靠性
 date: 2017-04-10 21:07:16
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 总结
 1. 一个疑惑：在接收的数据真正交给 blockmanager 之前是在 blockgenerate 中存储的，这里面并没有任何持久化保证，也就是说如果这个时候宕机是不是当前在 blockgenerate 中还没有交个 blockManager 的数据会全部丢失掉？

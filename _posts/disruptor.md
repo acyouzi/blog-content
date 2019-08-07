@@ -2,11 +2,9 @@
 title: Disruptor 学习与使用
 date: 2017-01-11 00:01:32
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/docker.png
+description: 
 tags:
-	- 并发
-	- Disruptor
+    - java
 ---
 
 ### Disruptor 基本使用

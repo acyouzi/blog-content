@@ -2,11 +2,9 @@
 title: Condition 的使用与原理
 date: 2016-11-21 17:12:40
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 
 Condition 与重入锁相关联，其关系类似于 synchronized 与 wait notify 之间的关系。

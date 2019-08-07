@@ -1,8 +1,9 @@
 ---
 title: Spark源码-Core-04-shuffle过程
 date: 2017-03-23 01:11:35
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 总结
 1. shuffle 过程分为 shuffle write 和 shuffle read 两个阶段

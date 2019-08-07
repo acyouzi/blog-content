@@ -2,11 +2,9 @@
 title: hexo 快速入门
 date: 2016-11-01 19:53:07
 author: "acyouzi"
-cdn: header-off
-header-img: img/dog.jpg
+description: 
 tags:
-	- 编程
-	- hexo
+    - 工具
 ---
 
 ### 安装

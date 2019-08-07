@@ -2,10 +2,9 @@
 title: java 杂记(0)
 date: 2016-11-16 16:38:50
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
+    - java
 ---
 
 ### 动态代理的真面目

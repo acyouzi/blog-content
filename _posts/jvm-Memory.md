@@ -2,11 +2,9 @@
 title: java虚拟机的内存布局及对象加载
 date: 2016-11-04 17:50:34
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- jvm
-	- java
+    - jvm
 ---
 
 ### 数据区域

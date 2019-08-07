@@ -1,8 +1,9 @@
 ---
 title: scala 学习 03 对象
 date: 2017-02-20 00:51:57
+description: 
 tags:
-    - scala
+	- scala
 ---
 # object 
 object，相当于class的单个实例，通常在里面放一些静态的field或者method

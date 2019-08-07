@@ -1,8 +1,9 @@
 ---
 title: scala 学习 05 trait
 date: 2017-02-20 00:58:40
+description: 
 tags:
-    - scala
+	- scala
 ---
 我觉得我已经爱上 scala 了, 在 java 中很麻烦的事情感觉用 scala 几行代码就能搞定。比如 trait 的调用链. 简单分析了一下 trait 的调用链，真的是满满的语法糖，但是用起来简单了很多。scala 把一些常用的设计模式变成了语法特性,这会不会是未来语言设计的趋势呢？
 # Trait

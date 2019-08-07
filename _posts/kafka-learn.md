@@ -1,9 +1,9 @@
 ---
 title: kafka 相关概念和使用
 date: 2017-02-06 22:23:11
+description: 
 tags:
-    - kafka
-    - 大数据
+    - java
 ---
 # 介绍
 kafka 是一个开源消息系统，使用 scala 编写。类似于 JMS , 但不是 JMS 的规范实现。

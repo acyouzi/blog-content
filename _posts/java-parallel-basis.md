@@ -2,11 +2,9 @@
 title: java 并发基础
 date: 2016-11-19 19:21:13
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 ### 可见性
 保证共享变量在线程 A 中修改了，线程 B 中立即能够知道

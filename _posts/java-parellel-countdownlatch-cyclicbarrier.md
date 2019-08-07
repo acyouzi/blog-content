@@ -2,11 +2,9 @@
 title: CountDownLatch 和 CyclicBarrier
 date: 2016-11-23 15:17:59
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 
 ### CountDownLatch

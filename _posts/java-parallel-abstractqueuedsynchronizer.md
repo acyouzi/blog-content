@@ -2,11 +2,9 @@
 title: AbstractQueuedSynchronizer 的共享锁独占锁实现
 date: 2016-11-21 15:42:39
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
-	- 并发
+    - 并发
 ---
 
 AbstractQueuedSynchronizer 可用作为一个同步工具的基础，持有一个volatile int state的属性，表示同步的状态。使用 cas 操作修改 state 保证线程安全。内部使用 LockSupport 来阻塞唤醒线程，维护链表来表示等待锁的队列。

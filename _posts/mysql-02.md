@@ -2,10 +2,9 @@
 title: 高性能 MySQL 笔记-高级
 date: 2016-12-05 21:30:21
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- MySQL
+    - mysql
 ---
 
 ### 分区表

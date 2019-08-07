@@ -1,8 +1,9 @@
 ---
 title: scala 学习 04 继承
 date: 2017-02-20 00:55:06
+description: 
 tags:
-    - scala
+	- scala
 ---
 # 继承
 1. 使用 extends 关键字

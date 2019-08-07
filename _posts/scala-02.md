@@ -1,8 +1,9 @@
 ---
 title: scala 学习 02 类基础
 date: 2017-02-20 00:42:50
+description: 
 tags:
-    - scala
+	- scala
 ---
 # scala 类基础
 下面是对 scala 类定义的一些基本概念以及对应到 java 语言中的一些思考

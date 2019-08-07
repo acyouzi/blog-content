@@ -2,11 +2,9 @@
 title: 使用 docker 搭建 hadoop ha 集群
 date: 2016-11-01 22:54:27
 author: "acyouzi"
-cdn: header-off
-header-img: img/docker.png
+description: 
 tags:
-	- docker
-	- hadoop
+    - java
 ---
 ### 准备材料
 首先为什么要使用Docker来搭建集群呢，因为我是在本机测试搭建hadoop集群，在本机性能不是超强的情况下，开七八个虚拟机的确还是比较困难的事情。所在这里使用Docker来搭建，相比于开多台虚拟机，使用Docker对机器的要求显然要低的多

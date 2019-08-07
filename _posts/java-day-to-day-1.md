@@ -2,10 +2,9 @@
 title: java 杂记(1)
 date: 2016-11-19 15:44:31
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/dog.jpg
+description: 
 tags:
-	- java
+    - java
 ---
 
 ### ArrayList 长度

@@ -1,8 +1,9 @@
 ---
 title: Spark源码-streaming-03-driver 可靠性
 date: 2017-04-12 16:21:12
+description: 
 tags:
-    - spark
+	- spark
 ---
 ## 总结
 1. ReceivedBlockTracker 管理 block 数据，如果配置了 checkpoint 目录，会 ReceivedBlockTracker 会把它管理的数据使用预写日志写入到 HDFS 中

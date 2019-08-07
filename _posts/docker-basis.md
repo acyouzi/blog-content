@@ -2,11 +2,9 @@
 title: Docker 容器与容器云-笔记-01-Docker 基本使用
 date: 2017-01-12 23:26:14
 author: "acyouzi"
-# cdn: header-off
-# header-img: img/docker.png
+description: 
 tags:
-	- docker
-	- 容器
+    -  容器
 ---
 以下内容是 Docker 容器与云的前半部分。后半部分正在研读中，kubernetes 的设计思想真的很让人佩服。每个人，哪怕不用这套东西，也应该学习一下他的设计思想.
 
